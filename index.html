@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#185FA5">
+<title>Exam Seating Plan</title>
+<link rel="manifest" id="manifest-placeholder">
+<style>
+:root {
+  --blue: #185FA5; --blue-light: #E6F1FB; --blue-mid: #378ADD;
+  --red: #E24B4A;
+  --success-bg: #EAF3DE; --success-text: #3B6D11;
+  --warn-bg: #FAEEDA; --warn-text: #854F0B;
+  --bg: #f0f2f5; --surface: #ffffff;
+  --border: rgba(0,0,0,0.11); --border-strong: rgba(0,0,0,0.22);
+  --text: #1a1a1a; --text-muted: #6b7280; --text-faint: #9ca3af;
+  --radius: 10px; --radius-sm: 7px;
+}
+* { box-sizing: border-box; -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; }
+html, body { height: 100%; overflow: hidden; font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); }
+#app { display: flex; flex-direction: column; height: 100vh; height: 100dvh; }
+
+.header {
+  background: var(--blue); color: #fff;
+  padding: 9px 12px; display: flex; align-items: center; gap: 8px; flex-shrink: 0;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+}
+.header h1 { font-size: 15px; font-weight: 600; flex: 1; }
+.hbtn {
+  padding: 6px 11px; font-size: 12px; font-weight: 500; border-radius: var(--radius-sm);
+  border: 1.5px solid rgba(255,255,255,0.4); background: rgba(255,255,255,0.15);
+  color: #fff; cursor: pointer; white-space: nowrap;
+}
+.hbtn.accent { background: #fff; color: var(--blue); border-color: #fff; }
+.hbtn:active { opacity: 0.75; }
+
+.setup-panel { background: var(--surface); border-bottom: 1px solid var(--border); flex-shrink: 0; overflow: hidden; transition: max-height 0.3s ease; }
+.setup-panel.open { max-height: 400px; }
+.setup-panel.closed { max-height: 0; border-bottom: none; }
+.setup-inner { padding: 14px 14px 10px; display: flex; flex-direction: column; gap: 12px; }
+.setup-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.setup-row label { font-size: 12px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; min-width: 95px; flex-shrink: 0; }
+.setup-row select {
+  flex: 1; min-width: 200px; padding: 9px 10px; font-size: 14px;
+  border-radius: var(--radius-sm); border: 1px solid var(--border-strong);
+  background: var(--bg); color: var(--text); cursor: pointer;
+  -webkit-user-select: auto; user-select: auto;
+}
+.setup-row select:disabled { color: var(--text-faint); cursor: default; }
+.confirm-bar { padding: 10px 14px; display: flex; align-items: center; gap: 12px; border-top: 1px solid var(--border); background: var(--bg); flex-wrap: wrap; }
+.session-preview { flex: 1; font-size: 13px; color: var(--text-muted); font-style: italic; min-width: 180px; }
+.session-preview b { color: var(--text); font-style: normal; }
+.confirm-btn { padding: 9px 20px; font-size: 13px; font-weight: 600; border-radius: var(--radius-sm); border: none; background: var(--blue); color: #fff; cursor: pointer; }
+.confirm-btn:disabled { background: #c9d4e0; cursor: default; }
+
+.session-bar { background: var(--blue-light); border-bottom: 1px solid #b5d4f4; padding: 7px 12px; display: flex; align-items: center; gap: 10px; flex-shrink: 0; flex-wrap: wrap; }
+.session-bar .session-info { flex: 1; font-size: 12px; color: #0C447C; font-weight: 500; line-height: 1.5; }
+.session-bar .session-info span { opacity: 0.7; font-weight: 400; }
+.change-btn { font-size: 11px; padding: 4px 10px; border-radius: 20px; border: 1px solid #b5d4f4; background: #fff; color: var(--blue); cursor: pointer; white-space: nowrap; }
+
+.main { display: flex; flex: 1; overflow: hidden; }
+
+.token-panel { flex-shrink: 0; background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; transition: width 0.18s ease; }
+.token-panel.normal { width: 98px; }
+.token-panel.compact { width: 64px; }
+.panel-header { padding: 6px 6px 5px; font-size: 10px; font-weight: 600; color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.07em; border-bottom: 1px solid var(--border); flex-shrink: 0; display: flex; align-items: center; justify-content: space-between; gap: 4px; }
+.view-toggle { font-size: 11px; padding: 2px 6px; border-radius: 4px; border: 1px solid var(--border-strong); background: var(--bg); color: var(--text-muted); cursor: pointer; line-height: 1; flex-shrink: 0; }
+.token-scroll { flex: 1; overflow-y: scroll; overflow-x: hidden; padding: 5px 4px 20px; display: flex; flex-direction: column; align-items: center; gap: 4px; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
+
+.token { border-radius: var(--radius); background: var(--blue); color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: grab; touch-action: none; text-align: center; flex-shrink: 0; box-shadow: 0 1px 3px rgba(24,95,165,0.25); }
+.token-panel.normal .token { width: 82px; min-height: 62px; padding: 5px 4px; }
+.token-panel.compact .token { width: 52px; min-height: 42px; padding: 3px; border-radius: var(--radius-sm); }
+.token .t-num { font-weight: 600; line-height: 1.2; }
+.token-panel.normal .token .t-num { font-size: 16px; }
+.token-panel.compact .token .t-num { font-size: 13px; }
+.token .t-extra { opacity: 0.83; line-height: 1.2; margin-top: 1px; word-break: break-all; }
+.token-panel.normal .token .t-extra { font-size: 10px; }
+.token-panel.compact .token .t-extra { font-size: 9px; }
+.token.used { background: #f3f4f6; color: var(--text-faint); border: 1.5px dashed #d1d5db; box-shadow: none; cursor: default; }
+.token.used .t-extra { opacity: 0.5; }
+.token.dragging { opacity: 0.25; }
+
+.grid-area { flex: 1; overflow: auto; padding: 12px 10px; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
+.room-label { font-size: 10px; color: var(--text-faint); text-align: center; letter-spacing: 0.1em; font-weight: 600; margin-bottom: 10px; }
+.aisle-label { font-size: 10px; color: var(--text-faint); text-align: center; letter-spacing: 0.07em; padding: 7px 0; margin: 4px 0; border-top: 1.5px dashed #d1d5db; border-bottom: 1.5px dashed #d1d5db; }
+.desk-grid { display: inline-grid; gap: 9px; margin-bottom: 9px; }
+.desk { width: 76px; min-height: 68px; border-radius: var(--radius); border: 2px dashed #c9d4e0; background: var(--surface); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 4px; position: relative; touch-action: none; text-align: center; }
+.desk .d-num { font-size: 16px; font-weight: 600; color: var(--blue); line-height: 1.2; }
+.desk .d-extra { font-size: 10px; color: var(--blue-mid); line-height: 1.3; margin-top: 2px; word-break: break-all; }
+.desk.gap { border: none; background: transparent; pointer-events: none; }
+.desk.over { background: var(--blue-light); border-color: var(--blue); border-style: solid; }
+.desk.filled { border-style: solid; border-color: var(--blue); background: var(--blue-light); }
+.desk .seat-id { position: absolute; bottom: 2px; right: 4px; font-size: 8px; color: var(--text-faint); pointer-events: none; }
+.desk .remove-btn { position: absolute; top: -9px; right: -9px; width: 22px; height: 22px; border-radius: 50%; background: var(--red); color: #fff; border: none; font-size: 15px; line-height: 22px; text-align: center; cursor: pointer; display: none; padding: 0; font-weight: 600; }
+.desk.filled:hover .remove-btn, .desk.filled:focus-within .remove-btn { display: block; }
+
+.bottom-bar { background: var(--surface); border-top: 1px solid var(--border); padding: 7px 12px; display: flex; align-items: center; gap: 14px; flex-shrink: 0; flex-wrap: wrap; }
+.stat { font-size: 12px; color: var(--text-muted); }
+.stat b { color: var(--text); font-weight: 600; }
+
+.ghost { position: fixed; pointer-events: none; z-index: 9999; border-radius: var(--radius); background: var(--blue); color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 5px 6px; opacity: 0.92; text-align: center; transform: translate(-50%, -50%) scale(1.06); box-shadow: 0 4px 18px rgba(24,95,165,0.5); min-width: 58px; min-height: 50px; }
+.ghost .t-num { font-size: 16px; font-weight: 600; line-height: 1.2; }
+.ghost .t-extra { font-size: 10px; opacity: 0.85; line-height: 1.3; margin-top: 1px; }
+
+.empty-state { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--text-faint); gap: 8px; padding: 20px; text-align: center; }
+.empty-state .big { font-size: 40px; }
+.empty-state p { font-size: 14px; max-width: 240px; line-height: 1.6; }
+
+.modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 10000; display: flex; align-items: center; justify-content: center; padding: 20px; }
+.modal { background: var(--surface); border-radius: 14px; padding: 22px 20px; max-width: 360px; width: 100%; }
+.modal h2 { font-size: 17px; font-weight: 700; margin-bottom: 14px; color: var(--blue); }
+.modal ol { padding-left: 18px; }
+.modal li { font-size: 14px; margin-bottom: 10px; line-height: 1.5; }
+.modal .note { font-size: 12px; color: var(--text-muted); margin-top: 12px; line-height: 1.5; }
+.modal .close-btn { margin-top: 18px; width: 100%; padding: 11px; font-size: 14px; font-weight: 600; border-radius: var(--radius); border: none; background: var(--blue); color: #fff; cursor: pointer; }
+
+.sig-panel { background: var(--surface); border-top: 1px solid var(--border); padding: 8px 12px; flex-shrink: 0; display: none; }
+.sig-panel.visible { display: block; }
+.sig-header { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; flex-wrap: wrap; }
+.sig-name { font-size: 12px; font-weight: 600; color: var(--text); flex: 1; }
+.sig-label { font-size: 11px; color: var(--text-faint); }
+.sig-btns { display: flex; gap: 6px; }
+.sig-btn { padding: 4px 10px; font-size: 11px; border-radius: var(--radius-sm); border: 1px solid var(--border-strong); background: var(--bg); color: var(--text); cursor: pointer; }
+.sig-btn:active { background: #e5e7eb; }
+canvas#sig-canvas {
+  display: block; width: 100%; height: 80px;
+  border: 1.5px solid var(--border-strong); border-radius: var(--radius-sm);
+  background: #fff; touch-action: none; cursor: crosshair;
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="header">
+    <h1>Exam Seating Plan</h1>
+    <button class="hbtn" onclick="showInstall()">Install app</button>
+    <button class="hbtn" onclick="clearAll()">Clear</button>
+    <button class="hbtn accent" onclick="printPlan()">Print / PDF</button>
+  </div>
+
+  <div class="setup-panel open" id="setup-panel">
+    <div class="setup-inner">
+      <div class="setup-row">
+        <label>Invigilator</label>
+        <select id="inv-select" onchange="updatePreview()">
+          <option value="">— select your name —</option>
+        </select>
+      </div>
+      <div class="setup-row">
+        <label>Exam session</label>
+        <select id="session-select" onchange="updatePreview()">
+          <option value="">— select exam session —</option>
+        </select>
+      </div>
+    </div>
+    <div class="confirm-bar">
+      <div class="session-preview" id="session-preview">Select an invigilator and exam session above</div>
+      <button class="confirm-btn" id="confirm-btn" disabled onclick="confirmSession()">Start seating plan</button>
+    </div>
+  </div>
+
+  <div class="session-bar" id="session-bar" style="display:none">
+    <div class="session-info" id="session-info-text"></div>
+    <button class="change-btn" onclick="changeSession()">Change session</button>
+  </div>
+
+  <div class="main" id="main-area">
+    <div class="empty-state">
+      <div class="big">📋</div>
+      <p>Select your name and an exam session above to begin</p>
+    </div>
+  </div>
+
+  <div class="bottom-bar" id="bottom-bar" style="display:none">
+    <div class="stat">Placed: <b id="s-placed">0</b></div>
+    <div class="stat">Remaining: <b id="s-remain">0</b></div>
+    <div class="stat">Empty desks: <b id="s-empty">0</b></div>
+  </div>
+
+  <div class="sig-panel" id="sig-panel">
+    <div class="sig-header">
+      <div>
+        <div class="sig-label">Invigilator signature</div>
+        <div class="sig-name" id="sig-name-label"></div>
+      </div>
+      <div class="sig-btns">
+        <button class="sig-btn" onclick="clearSig()">Clear</button>
+      </div>
+    </div>
+    <canvas id="sig-canvas"></canvas>
+  </div>
+</div>
+
+<div class="ghost" id="ghost" style="display:none">
+  <div class="t-num" id="g-num"></div>
+  <div class="t-extra" id="g-extra"></div>
+</div>
+
+<div class="modal-bg" id="install-modal" style="display:none">
+  <div class="modal">
+    <h2>Install as an app</h2>
+    <ol>
+      <li>Open this file in <b>Chrome</b> on your Android tablet.</li>
+      <li>Tap the <b>three-dot menu ⋮</b> in Chrome's top-right corner.</li>
+      <li>Tap <b>"Add to Home screen"</b> then <b>"Add"</b>.</li>
+      <li>Open from your home screen — runs fullscreen with no browser chrome.</li>
+    </ol>
+    <p class="note">Your session and placed candidates are saved automatically.</p>
+    <button class="close-btn" onclick="document.getElementById('install-modal').style.display='none'">Got it</button>
+  </div>
+</div>
+
+<script>
+const COLS = 5;
+const LAYOUT = [
+  [1,1,1,1,1],[1,1,1,1,1],[1,1,1,1,1],[1,1,1,1,1],
+  null,
+  [1,1,1,1,1],[1,1,1,1,1],[1,1,1,1,1],[1,1,0,0,0]
+];
+
+const STAFF_LIST = ["Sophie Benon", "Robert Davies", "Ian Gould", "Connor Graham", "Kyna Haden", "Marie Haigh-McGarry", "Tamás Jakab", "Tendai Karalius", "Terence Leggo", "Vanessa Limpkin", "Leslie McGregor", "Nonjabulo Mchunu", "Oscar McNaughton", "Róbertné Nagy", "Viki Naserghodsi", "Hakon Osmundsen", "Charlie Plummer", "Rob Riddell", "Richard Roberts", "Eszter Seres", "Robert Setchell", "Andor Spisák", "Hannah Sweatman", "Joshua Thwaites", "Luca Trovo", "Anikó Varga", "Matthew White", "Brigitta Kitti Zalatnay-Kovács"];
+const SESSION_LIST = [{"date": "24 Apr 2026", "time": "14:00", "exam": "IGCSE French 7156/41", "label": "24 Apr 2026  14:00  —  IGCSE French 7156/41", "candidates": [{"num": 2622, "extra": "(SRB)"}, {"num": 2623, "extra": ""}]}, {"date": "28 Apr 2026", "time": "09:30", "exam": "IGCSE German Listening 7159/12", "label": "28 Apr 2026  09:30  —  IGCSE German Listening 7159/12", "candidates": [{"num": 2601, "extra": ""}, {"num": 2602, "extra": ""}, {"num": 2607, "extra": ""}, {"num": 2613, "extra": ""}, {"num": 2618, "extra": ""}, {"num": 2624, "extra": ""}, {"num": 2627, "extra": ""}, {"num": 2629, "extra": ""}, {"num": 2631, "extra": ""}, {"num": 2633, "extra": ""}, {"num": 2634, "extra": ""}]}, {"date": "28 Apr 2026", "time": "10:30", "exam": "IGCSE German 7159/42", "label": "28 Apr 2026  10:30  —  IGCSE German 7159/42", "candidates": [{"num": 2601, "extra": ""}, {"num": 2602, "extra": ""}, {"num": 2607, "extra": ""}, {"num": 2613, "extra": ""}, {"num": 2618, "extra": ""}, {"num": 2624, "extra": ""}, {"num": 2627, "extra": ""}, {"num": 2629, "extra": ""}, {"num": 2631, "extra": ""}, {"num": 2633, "extra": ""}, {"num": 2634, "extra": ""}]}, {"date": "28 Apr 2026", "time": "13:45", "exam": "A level Psychology 9990/11", "label": "28 Apr 2026  13:45  —  A level Psychology 9990/11", "candidates": [{"num": 2401, "extra": ""}, {"num": 2402, "extra": ""}, {"num": 2403, "extra": ""}, {"num": 2404, "extra": ""}, {"num": 2405, "extra": ""}, {"num": 2408, "extra": ""}, {"num": 2411, "extra": ""}, {"num": 2412, "extra": "(25%)"}, {"num": 2422, "extra": ""}, {"num": 2427, "extra": ""}, {"num": 2429, "extra": ""}, {"num": 2430, "extra": ""}, {"num": 2432, "extra": ""}, {"num": 2434, "extra": ""}, {"num": 2439, "extra": "(25% + laptop)"}, {"num": 2440, "extra": ""}]}, {"date": "30 Apr 2026", "time": "14:45", "exam": "A level Psychology 9990/21", "label": "30 Apr 2026  14:45  —  A level Psychology 9990/21", "candidates": [{"num": 2401, "extra": ""}, {"num": 2402, "extra": ""}, {"num": 2403, "extra": ""}, {"num": 2404, "extra": ""}, {"num": 2405, "extra": ""}, {"num": 2408, "extra": ""}, {"num": 2411, "extra": ""}, {"num": 2412, "extra": "(25%)"}, {"num": 2422, "extra": ""}, {"num": 2427, "extra": ""}, {"num": 2429, "extra": ""}, {"num": 2430, "extra": ""}, {"num": 2432, "extra": ""}, {"num": 2434, "extra": ""}, {"num": 2439, "extra": "(25% + laptop)"}, {"num": 2440, "extra": ""}]}, {"date": "5 May 2026", "time": "09:30", "exam": "A level History 9489/12", "label": "5 May 2026  09:30  —  A level History 9489/12", "candidates": [{"num": 2402, "extra": ""}, {"num": 2403, "extra": ""}, {"num": 2405, "extra": ""}, {"num": 2411, "extra": ""}, {"num": 2420, "extra": ""}, {"num": 2427, "extra": ""}, {"num": 2442, "extra": ""}]}, {"date": "5 May 2026", "time": "11:00", "exam": "A level Business 9609/12", "label": "5 May 2026  11:00  —  A level Business 9609/12", "candidates": [{"num": 2408, "extra": ""}, {"num": 2409, "extra": ""}, {"num": 2412, "extra": "(25%)"}, {"num": 2420, "extra": ""}, {"num": 2434, "extra": ""}, {"num": 2439, "extra": "(25% + laptop)"}, {"num": 2440, "extra": ""}, {"num": 2441, "extra": ""}]}, {"date": "5 May 2026", "time": "14:30", "exam": "IGCSE French 7156/21", "label": "5 May 2026  14:30  —  IGCSE French 7156/21", "candidates": [{"num": 2622, "extra": "(SRB)"}, {"num": 2623, "extra": ""}]}, {"date": "6 May 2026", "time": "09:00", "exam": "IGCSE Geography 0976/12", "label": "6 May 2026  09:00  —  IGCSE Geography 0976/12", "candidates": [{"num": 2511, "extra": ""}, {"num": 2608, "extra": ""}, {"num": 2612, "extra": ""}, {"num": 2629, "extra": ""}, {"num": 2630, "extra": ""}]}, {"date": "6 May 2026", "time": "11:00", "exam": "IGCSE Global Perspectives 0457/12", "label": "6 May 2026  11:00  —  IGCSE Global Perspectives 0457/12", "candidates": [{"num": 2511, "extra": ""}, {"num": 2605, "extra": ""}, {"num": 2608, "extra": ""}, {"num": 2619, "extra": ""}, {"num": 2621, "extra": "(25%)"}, {"num": 2626, "extra": ""}]}, {"date": "6 May 2026", "time": "13:30", "exam": "A level Economics 9708/21", "label": "6 May 2026  13:30  —  A level Economics 9708/21", "candidates": [{"num": 2314, "extra": ""}, {"num": 2421, "extra": ""}, {"num": 2426, "extra": ""}]}, {"date": "7 May 2026", "time": "10:00", "exam": "A level History 9489/22, IGCSE History 0977/12", "label": "7 May 2026  10:00  —  A level History 9489/22, IGCSE History 0977/12", "candidates": [{"num": 2402, "extra": ""}, {"num": 2403, "extra": ""}, {"num": 2405, "extra": ""}, {"num": 2411, "extra": ""}, {"num": 2420, "extra": ""}, {"num": 2427, "extra": ""}, {"num": 2442, "extra": ""}, {"num": 2604, "extra": "(25% + laptop)"}, {"num": 2607, "extra": ""}, {"num": 2608, "extra": ""}, {"num": 2615, "extra": ""}, {"num": 2616, "extra": ""}, {"num": 2619, "extra": ""}, {"num": 2620, "extra": "(25%)"}, {"num": 2622, "extra": "(SRB)"}, {"num": 2625, "extra": ""}, {"num": 2632, "extra": ""}, {"num": 2634, "extra": ""}]}, {"date": "7 May 2026", "time": "12:45", "exam": "A level Chemistry 9701/41", "label": "7 May 2026  12:45  —  A level Chemistry 9701/41", "candidates": [{"num": 2409, "extra": ""}, {"num": 2419, "extra": ""}, {"num": 2431, "extra": ""}, {"num": 2433, "extra": ""}, {"num": 2436, "extra": ""}, {"num": 2437, "extra": ""}]}, {"date": "7 May 2026", "time": "15:00", "exam": "A level Geography 9696/11", "label": "7 May 2026  15:00  —  A level Geography 9696/11", "candidates": [{"num": 2408, "extra": ""}, {"num": 2411, "extra": ""}, {"num": 2429, "extra": ""}, {"num": 2432, "extra": ""}, {"num": 2434, "extra": ""}, {"num": 2437, "extra": ""}]}, {"date": "8 May 2026", "time": "08:30", "exam": "A level English Literature WET01/01 Unit 1, A level Mathematics WMA11/11 P1", "label": "8 May 2026  08:30  —  A level English Literature WET01/01 Unit 1, A level Mathematics WMA11/11 P1", "candidates": [{"num": 2402, "extra": ""}, {"num": 2422, "extra": ""}, {"num": 2430, "extra": ""}, {"num": 2439, "extra": "(25% + laptop)"}, {"num": 2440, "extra": ""}, {"num": 2442, "extra": ""}, {"num": 2314, "extra": ""}, {"num": 2401, "extra": ""}, {"num": 2403, "extra": ""}, {"num": 2418, "extra": ""}, {"num": 2419, "extra": ""}, {"num": 2420, "extra": ""}, {"num": 2433, "extra": ""}, {"num": 2437, "extra": ""}, {"num": 2438, "extra": ""}, {"num": 2441, "extra": ""}, {"num": 2504, "extra": ""}, {"num": 2510, "extra": ""}, {"num": 2526, "extra": ""}, {"num": 2527, "extra": ""}]}, {"date": "8 May 2026", "time": "13:30", "exam": "A level Biology 9700/41", "label": "8 May 2026  13:30  —  A level Biology 9700/41", "candidates": [{"num": 2404, "extra": ""}, {"num": 2409, "extra": ""}, {"num": 2414, "extra": ""}, {"num": 2419, "extra": ""}, {"num": 2434, "extra": ""}, {"num": 2437, "extra": ""}, {"num": 2438, "extra": ""}, {"num": 2441, "extra": ""}]}, {"date": "11 May 2026", "time": "10:45", "exam": "A level Business 9609/22, IGCSE English Literature 4ET1/01", "label": "11 May 2026  10:45  —  A level Business 9609/22, IGCSE English Literature 4ET1/01", "candidates": [{"num": 2408, "extra": ""}, {"num": 2409, "extra": ""}, {"num": 2412, "extra": "(25%)"}, {"num": 2420, "extra": ""}, {"num": 2434, "extra": ""}, {"num": 2439, "extra": "(25% + laptop)"}, {"num": 2440, "extra": ""}, {"num": 2441, "extra": ""}, {"num": 2605, "extra": ""}, {"num": 2610, "extra": ""}, {"num": 2613, "extra": ""}, {"num": 2622, "extra": "(SRB)"}, {"num": 2623, "extra": ""}]}, {"date": "11 May 2026", "time": "13:30", "exam": "A level Physics 9702/41, IGCSE Business 0986/11", "label": "11 May 2026  13:30  —  A level Physics 9702/41, IGCSE Business 0986/11", "candidates": [{"num": 2418, "extra": ""}, {"num": 2419, "extra": ""}, {"num": 2421, "extra": ""}, {"num": 2426, "extra": ""}, {"num": 2431, "extra": ""}, {"num": 2433, "extra": ""}, {"num": 2436, "extra": ""}, {"num": 2601, "extra": ""}, {"num": 2602, "extra": ""}, {"num": 2603, "extra": ""}, {"num": 2604, "extra": "(25% + laptop)"}, {"num": 2606, "extra": ""}, {"num": 2608, "extra": ""}, {"num": 2617, "extra": ""}, {"num": 2618, "extra": ""}, {"num": 2619, "extra": ""}, {"num": 2620, "extra": "(25%)"}, {"num": 2621, "extra": "(25%)"}, {"num": 2626, "extra": ""}, {"num": 2627, "extra": ""}, {"num": 2632, "extra": ""}, {"num": 2633, "extra": ""}, {"num": 2634, "extra": ""}, {"num": 2635, "extra": ""}]}, {"date": "12 May 2026", "time": "08:30", "exam": "A level Mathematics WMA12/01 P2", "label": "12 May 2026  08:30  —  A level Mathematics WMA12/01 P2", "candidates": [{"num": 2314, "extra": ""}, {"num": 2401, "extra": ""}, {"num": 2403, "extra": ""}, {"num": 2418, "extra": ""}, {"num": 2419, "extra": ""}, {"num": 2420, "extra": ""}, {"num": 2433, "extra": ""}, {"num": 2437, "extra": ""}, {"num": 2438, "extra": ""}, {"num": 2441, "extra": ""}, {"num": 2504, "extra": ""}, {"num": 2510, "extra": ""}, {"num": 2526, "extra": ""}, {"num": 2527, "extra": ""}]}, {"date": "12 May 2026", "time": "14:00", "exam": "IGCSE Biology 4BI1/1B, IGCSE Science Double Award 4SD0/1B", "label": "12 May 2026  14:00  —  IGCSE Biology 4BI1/1B, IGCSE Science Double Award 4SD0/1B", "candidates": [{"num": 2511, "extra": ""}, {"num": 2601, "extra": ""}, {"num": 2602, "extra": ""}, {"num": 2603, "extra": ""}, {"num": 2604, "extra": "(25% + laptop)"}, {"num": 2606, "extra": ""}, {"num": 2607, "extra": ""}, {"num": 2609, "extra": ""}, {"num": 2610, "extra": ""}, {"num": 2611, "extra": ""}, {"num": 2612, "extra": ""}, {"num": 2613, "extra": ""}, {"num": 2617, "extra": ""}, {"num": 2619, "extra": ""}, {"num": 2620, "extra": "(25%)"}, {"num": 2621, "extra": "(25%)"}, {"num": 2623, "extra": ""}, {"num": 2624, "extra": ""}, {"num": 2627, "extra": ""}, {"num": 2628, "extra": ""}, {"num": 2629, "extra": ""}, {"num": 2630, "extra": ""}, {"num": 2631, "extra": ""}, {"num": 2634, "extra": ""}, {"num": 2605, "extra": ""}, {"num": 2608, "extra": ""}, {"num": 2615, "extra": ""}, {"num": 2616, "extra": ""}, {"num": 2618, "extra": ""}, {"num": 2622, "extra": "(SRB)"}, {"num": 2625, "extra": ""}, {"num": 2626, "extra": ""}, {"num": 2632, "extra": ""}, {"num": 2633, "extra": ""}, {"num": 2635, "extra": ""}]}, {"date": "13 May 2026", "time": "09:30", "exam": "A level History 9489/32, IGCSE German 7159/22", "label": "13 May 2026  09:30  —  A level History 9489/32, IGCSE German 7159/22", "candidates": [{"num": 2402, "extra": ""}, {"num": 2403, "extra": ""}, {"num": 2405, "extra": ""}, {"num": 2411, "extra": ""}, {"num": 2420, "extra": ""}, {"num": 2427, "extra": ""}, {"num": 2442, "extra": ""}, {"num": 2601, "extra": ""}, {"num": 2602, "extra": ""}, {"num": 2607, "extra": ""}, {"num": 2613, "extra": ""}, {"num": 2618, "extra": ""}, {"num": 2624, "extra": ""}, {"num": 2627, "extra": ""}, {"num": 2629, "extra": ""}, {"num": 2631, "extra": ""}, {"num": 2633, "extra": ""}, {"num": 2634, "extra": ""}]}, {"date": "13 May 2026", "time": "11:00", "exam": "IGCSE Geography 0976/22", "label": "13 May 2026  11:00  —  IGCSE Geography 0976/22", "candidates": [{"num": 2511, "extra": ""}, {"num": 2608, "extra": ""}, {"num": 2612, "extra": ""}, {"num": 2629, "extra": ""}, {"num": 2630, "extra": ""}]}, {"date": "13 May 2026", "time": "14:00", "exam": "IGCSE Mathematics B 4MB1/01", "label": "13 May 2026  14:00  —  IGCSE Mathematics B 4MB1/01", "candidates": [{"num": 2607, "extra": ""}, {"num": 2609, "extra": ""}, {"num": 2611, "extra": ""}, {"num": 2612, "extra": ""}, {"num": 2615, "extra": ""}, {"num": 2616, "extra": ""}, {"num": 2624, "extra": ""}, {"num": 2625, "extra": ""}, {"num": 2628, "extra": ""}, {"num": 2629, "extra": ""}, {"num": 2630, "extra": ""}, {"num": 2631, "extra": ""}]}, {"date": "14 May 2026", "time": "08:30", "exam": "A level Mathematics WDM11/01 D1", "label": "14 May 2026  08:30  —  A level Mathematics WDM11/01 D1", "candidates": [{"num": 2421, "extra": ""}, {"num": 2426, "extra": ""}, {"num": 2431, "extra": ""}, {"num": 2433, "extra": ""}, {"num": 2436, "extra": ""}, {"num": 2504, "extra": ""}, {"num": 2510, "extra": ""}, {"num": 2526, "extra": ""}, {"num": 2527, "extra": ""}]}, {"date": "14 May 2026", "time": "10:15", "exam": "IGCSE Mathematics A Higher 4MA1/1H", "label": "14 May 2026  10:15  —  IGCSE Mathematics A Higher 4MA1/1H", "candidates": [{"num": 2511, "extra": ""}, {"num": 2601, "extra": ""}, {"num": 2602, "extra": ""}, {"num": 2603, "extra": ""}, {"num": 2604, "extra": "(25% + laptop)"}, {"num": 2605, "extra": ""}, {"num": 2606, "extra": ""}, {"num": 2608, "extra": ""}, {"num": 2610, "extra": ""}, {"num": 2613, "extra": ""}, {"num": 2617, "extra": ""}, {"num": 2618, "extra": ""}, {"num": 2619, "extra": ""}, {"num": 2620, "extra": "(25%)"}, {"num": 2621, "extra": "(25%)"}, {"num": 2622, "extra": "(SRB)"}, {"num": 2623, "extra": ""}, {"num": 2626, "extra": ""}, {"num": 2627, "extra": ""}, {"num": 2632, "extra": ""}, {"num": 2633, "extra": ""}, {"num": 2634, "extra": ""}, {"num": 2635, "extra": ""}]}, {"date": "14 May 2026", "time": "13:30", "exam": "A level Psychology 9990/41", "label": "14 May 2026  13:30  —  A level Psychology 9990/41", "candidates": [{"num": 2401, "extra": ""}, {"num": 2402, "extra": ""}, {"num": 2403, "extra": ""}, {"num": 2404, "extra": ""}, {"num": 2405, "extra": ""}, {"num": 2408, "extra": ""}, {"num": 2411, "extra": ""}, {"num": 2412, "extra": "(25%)"}, {"num": 2422, "extra": ""}, {"num": 2427, "extra": ""}, {"num": 2429, "extra": ""}, {"num": 2430, "extra": ""}, {"num": 2432, "extra": ""}, {"num": 2434, "extra": ""}, {"num": 2439, "extra": "(25% + laptop)"}, {"num": 2440, "extra": ""}]}, {"date": "15 May 2026", "time": "10:30", "exam": "IGCSE History 0977/22", "label": "15 May 2026  10:30  —  IGCSE History 0977/22", "candidates": [{"num": 2604, "extra": "(25% + laptop)"}, {"num": 2607, "extra": ""}, {"num": 2608, "extra": ""}, {"num": 2615, "extra": ""}, {"num": 2616, "extra": ""}, {"num": 2619, "extra": ""}, {"num": 2620, "extra": "(25%)"}, {"num": 2622, "extra": "(SRB)"}, {"num": 2625, "extra": ""}, {"num": 2632, "extra": ""}, {"num": 2634, "extra": ""}]}, {"date": "15 May 2026", "time": "13:30", "exam": "A level Geography 9696/31", "label": "15 May 2026  13:30  —  A level Geography 9696/31", "candidates": [{"num": 2408, "extra": ""}, {"num": 2411, "extra": ""}, {"num": 2429, "extra": ""}, {"num": 2432, "extra": ""}, {"num": 2434, "extra": ""}, {"num": 2437, "extra": ""}]}, {"date": "18 May 2026", "time": "09:00", "exam": "IGCSE History 0977/42 (1 student)", "label": "18 May 2026  09:00  —  IGCSE History 0977/42 (1 student)", "candidates": [{"num": 2604, "extra": "(25% + laptop)"}]}, {"date": "18 May 2026", "time": "10:30", "exam": "IGCSE Chemistry 4CH1/1C, IGCSE Science Double Award 4SD0/1C", "label": "18 May 2026  10:30  —  IGCSE Chemistry 4CH1/1C, IGCSE Science Double Award 4SD0/1C", "candidates": [{"num": 2511, "extra": ""}, {"num": 2601, "extra": ""}, {"num": 2602, "extra": ""}, {"num": 2603, "extra": ""}, {"num": 2604, "extra": "(25% + laptop)"}, {"num": 2606, "extra": ""}, {"num": 2607, "extra": ""}, {"num": 2609, "extra": ""}, {"num": 2610, "extra": ""}, {"num": 2611, "extra": ""}, {"num": 2612, "extra": ""}, {"num": 2613, "extra": ""}, {"num": 2617, "extra": ""}, {"num": 2619, "extra": ""}, {"num": 2620, "extra": "(25%)"}, {"num": 2621, "extra": "(25%)"}, {"num": 2623, "extra": ""}, {"num": 2624, "extra": ""}, {"num": 2627, "extra": ""}, {"num": 2628, "extra": ""}, {"num": 2629, "extra": ""}, {"num": 2630, "extra": ""}, {"num": 2631, "extra": ""}, {"num": 2634, "extra": ""}, {"num": 2605, "extra": ""}, {"num": 2608, "extra": ""}, {"num": 2615, "extra": ""}, {"num": 2616, "extra": ""}, {"num": 2618, "extra": ""}, {"num": 2622, "extra": "(SRB)"}, {"num": 2625, "extra": ""}, {"num": 2626, "extra": ""}, {"num": 2632, "extra": ""}, {"num": 2633, "extra": ""}, {"num": 2635, "extra": ""}]}, {"date": "18 May 2026", "time": "13:30", "exam": "A level Chemistry 9701/21", "label": "18 May 2026  13:30  —  A level Chemistry 9701/21", "candidates": [{"num": 2404, "extra": ""}, {"num": 2409, "extra": ""}, {"num": 2414, "extra": ""}, {"num": 2419, "extra": ""}, {"num": 2431, "extra": ""}, {"num": 2433, "extra": ""}, {"num": 2436, "extra": ""}, {"num": 2437, "extra": ""}]}, {"date": "18 May 2026", "time": "15:00", "exam": "A level Chemistry 9701/51, IGCSE Business 0986/21", "label": "18 May 2026  15:00  —  A level Chemistry 9701/51, IGCSE Business 0986/21", "candidates": [{"num": 2409, "extra": ""}, {"num": 2419, "extra": ""}, {"num": 2431, "extra": ""}, {"num": 2433, "extra": ""}, {"num": 2436, "extra": ""}, {"num": 2437, "extra": ""}, {"num": 2601, "extra": ""}, {"num": 2602, "extra": ""}, {"num": 2603, "extra": ""}, {"num": 2604, "extra": "(25% + laptop)"}, {"num": 2606, "extra": ""}, {"num": 2608, "extra": ""}, {"num": 2617, "extra": ""}, {"num": 2618, "extra": ""}, {"num": 2619, "extra": ""}, {"num": 2620, "extra": "(25%)"}, {"num": 2621, "extra": "(25%)"}, {"num": 2626, "extra": ""}, {"num": 2627, "extra": ""}, {"num": 2632, "extra": ""}, {"num": 2633, "extra": ""}, {"num": 2634, "extra": ""}, {"num": 2635, "extra": ""}]}, {"date": "19 May 2026", "time": "08:30", "exam": "A level Mathematics WST01/01 S1", "label": "19 May 2026  08:30  —  A level Mathematics WST01/01 S1", "candidates": [{"num": 2314, "extra": ""}, {"num": 2401, "extra": ""}, {"num": 2403, "extra": ""}, {"num": 2418, "extra": ""}, {"num": 2419, "extra": ""}, {"num": 2420, "extra": ""}, {"num": 2433, "extra": ""}, {"num": 2437, "extra": ""}, {"num": 2438, "extra": ""}, {"num": 2441, "extra": ""}, {"num": 2504, "extra": ""}, {"num": 2510, "extra": ""}, {"num": 2526, "extra": ""}, {"num": 2527, "extra": ""}]}, {"date": "19 May 2026", "time": "10:30", "exam": "IGCSE English Literature 4ET1/02", "label": "19 May 2026  10:30  —  IGCSE English Literature 4ET1/02", "candidates": [{"num": 2605, "extra": ""}, {"num": 2610, "extra": ""}, {"num": 2613, "extra": ""}, {"num": 2622, "extra": "(SRB)"}, {"num": 2623, "extra": ""}]}, {"date": "19 May 2026", "time": "14:00", "exam": "A level Economics 9708/41, IGCSE Further Pure Mathematics 4PM1/01", "label": "19 May 2026  14:00  —  A level Economics 9708/41, IGCSE Further Pure Mathematics 4PM1/01", "candidates": [{"num": 2314, "extra": ""}, {"num": 2421, "extra": ""}, {"num": 2426, "extra": ""}, {"num": 2607, "extra": ""}, {"num": 2609, "extra": ""}, {"num": 2611, "extra": ""}, {"num": 2612, "extra": ""}, {"num": 2615, "extra": ""}, {"num": 2616, "extra": ""}, {"num": 2624, "extra": ""}, {"num": 2625, "extra": ""}, {"num": 2628, "extra": ""}, {"num": 2629, "extra": ""}, {"num": 2630, "extra": ""}, {"num": 2631, "extra": ""}]}, {"date": "20 May 2026", "time": "10:45", "exam": "A level History 9489/42", "label": "20 May 2026  10:45  —  A level History 9489/42", "candidates": [{"num": 2402, "extra": ""}, {"num": 2403, "extra": ""}, {"num": 2405, "extra": ""}, {"num": 2411, "extra": ""}, {"num": 2420, "extra": ""}, {"num": 2427, "extra": ""}, {"num": 2442, "extra": ""}]}, {"date": "20 May 2026", "time": "13:30", "exam": "A level Physics 9702/21", "label": "20 May 2026  13:30  —  A level Physics 9702/21", "candidates": [{"num": 2418, "extra": ""}, {"num": 2419, "extra": ""}, {"num": 2421, "extra": ""}, {"num": 2426, "extra": ""}, {"num": 2431, "extra": ""}, {"num": 2433, "extra": ""}, {"num": 2436, "extra": ""}]}, {"date": "20 May 2026", "time": "15:00", "exam": "A level Physics 9702/51", "label": "20 May 2026  15:00  —  A level Physics 9702/51", "candidates": [{"num": 2418, "extra": ""}, {"num": 2419, "extra": ""}, {"num": 2421, "extra": ""}, {"num": 2426, "extra": ""}, {"num": 2431, "extra": ""}, {"num": 2433, "extra": ""}, {"num": 2436, "extra": ""}]}, {"date": "21 May 2026", "time": "10:00", "exam": "IGCSE English 4EA1/01", "label": "21 May 2026  10:00  —  IGCSE English 4EA1/01", "candidates": [{"num": 2511, "extra": ""}, {"num": 2601, "extra": ""}, {"num": 2602, "extra": ""}, {"num": 2603, "extra": ""}, {"num": 2604, "extra": "(25% + laptop)"}, {"num": 2605, "extra": ""}, {"num": 2606, "extra": ""}, {"num": 2607, "extra": ""}, {"num": 2608, "extra": ""}, {"num": 2609, "extra": ""}, {"num": 2610, "extra": ""}, {"num": 2611, "extra": ""}, {"num": 2612, "extra": ""}, {"num": 2613, "extra": ""}, {"num": 2615, "extra": ""}, {"num": 2616, "extra": ""}, {"num": 2617, "extra": ""}, {"num": 2618, "extra": ""}, {"num": 2619, "extra": ""}, {"num": 2620, "extra": "(25%)"}, {"num": 2621, "extra": "(25%)"}, {"num": 2622, "extra": "(SRB)"}, {"num": 2623, "extra": ""}, {"num": 2624, "extra": ""}, {"num": 2625, "extra": ""}, {"num": 2626, "extra": ""}, {"num": 2627, "extra": ""}, {"num": 2628, "extra": ""}, {"num": 2629, "extra": ""}, {"num": 2630, "extra": ""}, {"num": 2631, "extra": ""}, {"num": 2632, "extra": ""}, {"num": 2633, "extra": ""}, {"num": 2634, "extra": ""}, {"num": 2635, "extra": ""}]}, {"date": "21 May 2026", "time": "13:30", "exam": "A level Geography 9696/41", "label": "21 May 2026  13:30  —  A level Geography 9696/41", "candidates": [{"num": 2408, "extra": ""}, {"num": 2411, "extra": ""}, {"num": 2429, "extra": ""}, {"num": 2432, "extra": ""}, {"num": 2434, "extra": ""}, {"num": 2437, "extra": ""}]}, {"date": "22 May 2026", "time": "10:45", "exam": "IGCSE Physical Education 0995/12", "label": "22 May 2026  10:45  —  IGCSE Physical Education 0995/12", "candidates": [{"num": 2609, "extra": ""}, {"num": 2613, "extra": ""}, {"num": 2615, "extra": ""}, {"num": 2616, "extra": ""}, {"num": 2617, "extra": ""}, {"num": 2622, "extra": "(SRB)"}, {"num": 2623, "extra": ""}, {"num": 2625, "extra": ""}, {"num": 2626, "extra": ""}, {"num": 2632, "extra": ""}]}, {"date": "22 May 2026", "time": "13:30", "exam": "IGCSE Economics 0987/21", "label": "22 May 2026  13:30  —  IGCSE Economics 0987/21", "candidates": [{"num": 2601, "extra": ""}, {"num": 2602, "extra": ""}, {"num": 2604, "extra": "(25% + laptop)"}, {"num": 2605, "extra": ""}, {"num": 2606, "extra": ""}, {"num": 2610, "extra": ""}, {"num": 2611, "extra": ""}, {"num": 2612, "extra": ""}, {"num": 2615, "extra": ""}, {"num": 2616, "extra": ""}, {"num": 2617, "extra": ""}, {"num": 2618, "extra": ""}, {"num": 2620, "extra": "(25%)"}, {"num": 2621, "extra": "(25%)"}, {"num": 2624, "extra": ""}, {"num": 2625, "extra": ""}, {"num": 2627, "extra": ""}, {"num": 2628, "extra": ""}, {"num": 2630, "extra": ""}, {"num": 2632, "extra": ""}, {"num": 2633, "extra": ""}, {"num": 2635, "extra": ""}]}, {"date": "29 May 2026", "time": "08:30", "exam": "A level English Literature WET03/01 Unit 3", "label": "29 May 2026  08:30  —  A level English Literature WET03/01 Unit 3", "candidates": [{"num": 2402, "extra": ""}, {"num": 2422, "extra": ""}, {"num": 2430, "extra": ""}, {"num": 2439, "extra": "(25% + laptop)"}, {"num": 2440, "extra": ""}, {"num": 2442, "extra": ""}]}, {"date": "1 Jun 2026", "time": "11:00", "exam": "A level Further Mathematics WFM02/01 FP2", "label": "1 Jun 2026  11:00  —  A level Further Mathematics WFM02/01 FP2", "candidates": [{"num": 2421, "extra": ""}, {"num": 2426, "extra": ""}, {"num": 2431, "extra": ""}, {"num": 2436, "extra": ""}]}, {"date": "2 Jun 2026", "time": "08:30", "exam": "A level Mathematics WMA13/01 P3", "label": "2 Jun 2026  08:30  —  A level Mathematics WMA13/01 P3", "candidates": [{"num": 2314, "extra": ""}, {"num": 2403, "extra": ""}, {"num": 2418, "extra": ""}, {"num": 2419, "extra": ""}, {"num": 2420, "extra": ""}, {"num": 2433, "extra": ""}, {"num": 2437, "extra": ""}, {"num": 2438, "extra": ""}, {"num": 2441, "extra": ""}, {"num": 2504, "extra": ""}, {"num": 2510, "extra": ""}, {"num": 2526, "extra": ""}, {"num": 2527, "extra": ""}]}, {"date": "2 Jun 2026", "time": "10:15", "exam": "IGCSE Physics 4PH1/1P , IGCSE Science Double Award 4SD0/1P", "label": "2 Jun 2026  10:15  —  IGCSE Physics 4PH1/1P , IGCSE Science Double Award 4SD0/1P", "candidates": [{"num": 2511, "extra": ""}, {"num": 2601, "extra": ""}, {"num": 2602, "extra": ""}, {"num": 2603, "extra": ""}, {"num": 2604, "extra": "(25% + laptop)"}, {"num": 2606, "extra": ""}, {"num": 2607, "extra": ""}, {"num": 2609, "extra": ""}, {"num": 2610, "extra": ""}, {"num": 2611, "extra": ""}, {"num": 2612, "extra": ""}, {"num": 2613, "extra": ""}, {"num": 2617, "extra": ""}, {"num": 2619, "extra": ""}, {"num": 2620, "extra": "(25%)"}, {"num": 2621, "extra": "(25%)"}, {"num": 2623, "extra": ""}, {"num": 2624, "extra": ""}, {"num": 2627, "extra": ""}, {"num": 2628, "extra": ""}, {"num": 2629, "extra": ""}, {"num": 2630, "extra": ""}, {"num": 2631, "extra": ""}, {"num": 2634, "extra": ""}, {"num": 2605, "extra": ""}, {"num": 2608, "extra": ""}, {"num": 2615, "extra": ""}, {"num": 2616, "extra": ""}, {"num": 2618, "extra": ""}, {"num": 2622, "extra": "(SRB)"}, {"num": 2625, "extra": ""}, {"num": 2626, "extra": ""}, {"num": 2632, "extra": ""}, {"num": 2633, "extra": ""}, {"num": 2635, "extra": ""}]}, {"date": "2 Jun 2026", "time": "14:00", "exam": "A level Chemistry 9701/11", "label": "2 Jun 2026  14:00  —  A level Chemistry 9701/11", "candidates": [{"num": 2404, "extra": ""}, {"num": 2409, "extra": ""}, {"num": 2414, "extra": ""}, {"num": 2419, "extra": ""}, {"num": 2431, "extra": ""}, {"num": 2433, "extra": ""}, {"num": 2436, "extra": ""}, {"num": 2437, "extra": ""}]}, {"date": "3 Jun 2026", "time": "10:30", "exam": "A level Mechanics WME02/01, A level Spanish WSP04/01 Unit 4, IGCSE Mathematics A Higher 4MA1/2H", "label": "3 Jun 2026  10:30  —  A level Mechanics WME02/01, A level Spanish WSP04/01 Unit 4, IGCSE Mathematics A Higher 4MA1/2H", "candidates": [{"num": 2436, "extra": ""}, {"num": 2401, "extra": ""}, {"num": 2418, "extra": ""}, {"num": 2422, "extra": ""}, {"num": 2511, "extra": ""}, {"num": 2601, "extra": ""}, {"num": 2602, "extra": ""}, {"num": 2603, "extra": ""}, {"num": 2604, "extra": "(25% + laptop)"}, {"num": 2605, "extra": ""}, {"num": 2606, "extra": ""}, {"num": 2608, "extra": ""}, {"num": 2610, "extra": ""}, {"num": 2613, "extra": ""}, {"num": 2617, "extra": ""}, {"num": 2618, "extra": ""}, {"num": 2619, "extra": ""}, {"num": 2620, "extra": "(25%)"}, {"num": 2621, "extra": "(25%)"}, {"num": 2622, "extra": "(SRB)"}, {"num": 2623, "extra": ""}, {"num": 2626, "extra": ""}, {"num": 2627, "extra": ""}, {"num": 2632, "extra": ""}, {"num": 2633, "extra": ""}, {"num": 2634, "extra": ""}, {"num": 2635, "extra": ""}]}, {"date": "3 Jun 2026", "time": "14:00", "exam": "A level Physics 9702/11", "label": "3 Jun 2026  14:00  —  A level Physics 9702/11", "candidates": [{"num": 2418, "extra": ""}, {"num": 2419, "extra": ""}, {"num": 2421, "extra": ""}, {"num": 2426, "extra": ""}, {"num": 2431, "extra": ""}, {"num": 2433, "extra": ""}, {"num": 2436, "extra": ""}]}, {"date": "4 Jun 2026", "time": "08:30", "exam": "A level French WFR04/01 Unit 4", "label": "4 Jun 2026  08:30  —  A level French WFR04/01 Unit 4", "candidates": [{"num": 2314, "extra": ""}, {"num": 2403, "extra": ""}, {"num": 2430, "extra": ""}]}, {"date": "4 Jun 2026", "time": "14:00", "exam": "A level Biology 9700/11, IGCSE Further Pure Mathematics 4PM1/02", "label": "4 Jun 2026  14:00  —  A level Biology 9700/11, IGCSE Further Pure Mathematics 4PM1/02", "candidates": [{"num": 2404, "extra": ""}, {"num": 2409, "extra": ""}, {"num": 2414, "extra": ""}, {"num": 2419, "extra": ""}, {"num": 2434, "extra": ""}, {"num": 2437, "extra": ""}, {"num": 2438, "extra": ""}, {"num": 2441, "extra": ""}, {"num": 2607, "extra": ""}, {"num": 2609, "extra": ""}, {"num": 2611, "extra": ""}, {"num": 2612, "extra": ""}, {"num": 2615, "extra": ""}, {"num": 2616, "extra": ""}, {"num": 2624, "extra": ""}, {"num": 2625, "extra": ""}, {"num": 2628, "extra": ""}, {"num": 2629, "extra": ""}, {"num": 2630, "extra": ""}, {"num": 2631, "extra": ""}]}, {"date": "5 Jun 2026", "time": "09:30", "exam": "IGCSE English 4EA1/02", "label": "5 Jun 2026  09:30  —  IGCSE English 4EA1/02", "candidates": [{"num": 2511, "extra": ""}, {"num": 2601, "extra": ""}, {"num": 2602, "extra": ""}, {"num": 2603, "extra": ""}, {"num": 2604, "extra": "(25% + laptop)"}, {"num": 2605, "extra": ""}, {"num": 2606, "extra": ""}, {"num": 2607, "extra": ""}, {"num": 2608, "extra": ""}, {"num": 2609, "extra": ""}, {"num": 2610, "extra": ""}, {"num": 2611, "extra": ""}, {"num": 2612, "extra": ""}, {"num": 2613, "extra": ""}, {"num": 2615, "extra": ""}, {"num": 2616, "extra": ""}, {"num": 2617, "extra": ""}, {"num": 2618, "extra": ""}, {"num": 2619, "extra": ""}, {"num": 2620, "extra": "(25%)"}, {"num": 2621, "extra": "(25%)"}, {"num": 2622, "extra": "(SRB)"}, {"num": 2623, "extra": ""}, {"num": 2624, "extra": ""}, {"num": 2625, "extra": ""}, {"num": 2626, "extra": ""}, {"num": 2627, "extra": ""}, {"num": 2628, "extra": ""}, {"num": 2629, "extra": ""}, {"num": 2630, "extra": ""}, {"num": 2631, "extra": ""}, {"num": 2632, "extra": ""}, {"num": 2633, "extra": ""}, {"num": 2634, "extra": ""}, {"num": 2635, "extra": ""}]}, {"date": "5 Jun 2026", "time": "11:30", "exam": "A level Mathematics WST02/01 S2", "label": "5 Jun 2026  11:30  —  A level Mathematics WST02/01 S2", "candidates": [{"num": 2314, "extra": ""}, {"num": 2403, "extra": ""}, {"num": 2418, "extra": ""}, {"num": 2419, "extra": ""}, {"num": 2420, "extra": ""}, {"num": 2433, "extra": ""}, {"num": 2437, "extra": ""}, {"num": 2438, "extra": ""}, {"num": 2441, "extra": ""}, {"num": 2504, "extra": ""}, {"num": 2510, "extra": ""}, {"num": 2526, "extra": ""}, {"num": 2527, "extra": ""}]}, {"date": "5 Jun 2026", "time": "14:15", "exam": "A level Economics 9708/31, IGCSE Economics 0987/11", "label": "5 Jun 2026  14:15  —  A level Economics 9708/31, IGCSE Economics 0987/11", "candidates": [{"num": 2314, "extra": ""}, {"num": 2421, "extra": ""}, {"num": 2426, "extra": ""}, {"num": 2601, "extra": ""}, {"num": 2602, "extra": ""}, {"num": 2604, "extra": "(25% + laptop)"}, {"num": 2605, "extra": ""}, {"num": 2606, "extra": ""}, {"num": 2610, "extra": ""}, {"num": 2611, "extra": ""}, {"num": 2612, "extra": ""}, {"num": 2615, "extra": ""}, {"num": 2616, "extra": ""}, {"num": 2617, "extra": ""}, {"num": 2618, "extra": ""}, {"num": 2620, "extra": "(25%)"}, {"num": 2621, "extra": "(25%)"}, {"num": 2624, "extra": ""}, {"num": 2625, "extra": ""}, {"num": 2627, "extra": ""}, {"num": 2628, "extra": ""}, {"num": 2630, "extra": ""}, {"num": 2632, "extra": ""}, {"num": 2633, "extra": ""}, {"num": 2635, "extra": ""}]}, {"date": "8 Jun 2026", "time": "10:30", "exam": "IGCSE Biology 4BI1/2B", "label": "8 Jun 2026  10:30  —  IGCSE Biology 4BI1/2B", "candidates": [{"num": 2511, "extra": ""}, {"num": 2601, "extra": ""}, {"num": 2602, "extra": ""}, {"num": 2603, "extra": ""}, {"num": 2604, "extra": "(25% + laptop)"}, {"num": 2606, "extra": ""}, {"num": 2607, "extra": ""}, {"num": 2609, "extra": ""}, {"num": 2610, "extra": ""}, {"num": 2611, "extra": ""}, {"num": 2612, "extra": ""}, {"num": 2613, "extra": ""}, {"num": 2617, "extra": ""}, {"num": 2619, "extra": ""}, {"num": 2620, "extra": "(25%)"}, {"num": 2621, "extra": "(25%)"}, {"num": 2623, "extra": ""}, {"num": 2624, "extra": ""}, {"num": 2627, "extra": ""}, {"num": 2628, "extra": ""}, {"num": 2629, "extra": ""}, {"num": 2630, "extra": ""}, {"num": 2631, "extra": ""}, {"num": 2634, "extra": ""}]}, {"date": "8 Jun 2026", "time": "14:00", "exam": "A level Economics 9708/11", "label": "8 Jun 2026  14:00  —  A level Economics 9708/11", "candidates": [{"num": 2314, "extra": ""}, {"num": 2421, "extra": ""}, {"num": 2426, "extra": ""}]}, {"date": "9 Jun 2026", "time": "08:30", "exam": "A level Mathematics WMA14/01 P4", "label": "9 Jun 2026  08:30  —  A level Mathematics WMA14/01 P4", "candidates": [{"num": 2314, "extra": ""}, {"num": 2403, "extra": ""}, {"num": 2418, "extra": ""}, {"num": 2419, "extra": ""}, {"num": 2420, "extra": ""}, {"num": 2433, "extra": ""}, {"num": 2437, "extra": ""}, {"num": 2438, "extra": ""}, {"num": 2441, "extra": ""}, {"num": 2504, "extra": ""}, {"num": 2510, "extra": ""}, {"num": 2526, "extra": ""}, {"num": 2527, "extra": ""}]}, {"date": "9 Jun 2026", "time": "10:15", "exam": "A level Religious Studies 9RS0/02", "label": "9 Jun 2026  10:15  —  A level Religious Studies 9RS0/02", "candidates": [{"num": 2402, "extra": ""}, {"num": 2412, "extra": "(25%)"}, {"num": 2427, "extra": ""}, {"num": 2442, "extra": ""}]}, {"date": "10 Jun 2026", "time": "10:30", "exam": "A level Further Mathematics WFM03/01 FP3, IGCSE Mathematics B 4MB1/02", "label": "10 Jun 2026  10:30  —  A level Further Mathematics WFM03/01 FP3, IGCSE Mathematics B 4MB1/02", "candidates": [{"num": 2421, "extra": ""}, {"num": 2426, "extra": ""}, {"num": 2431, "extra": ""}, {"num": 2436, "extra": ""}, {"num": 2607, "extra": ""}, {"num": 2609, "extra": ""}, {"num": 2611, "extra": ""}, {"num": 2612, "extra": ""}, {"num": 2615, "extra": ""}, {"num": 2616, "extra": ""}, {"num": 2624, "extra": ""}, {"num": 2625, "extra": ""}, {"num": 2628, "extra": ""}, {"num": 2629, "extra": ""}, {"num": 2630, "extra": ""}, {"num": 2631, "extra": ""}]}, {"date": "12 Jun 2026", "time": "10:30", "exam": "A level Mathematics WST03/01 S3, IGCSE Chemistry 4CH1/2C", "label": "12 Jun 2026  10:30  —  A level Mathematics WST03/01 S3, IGCSE Chemistry 4CH1/2C", "candidates": [{"num": 2421, "extra": ""}, {"num": 2426, "extra": ""}, {"num": 2431, "extra": ""}, {"num": 2436, "extra": ""}, {"num": 2511, "extra": ""}, {"num": 2601, "extra": ""}, {"num": 2602, "extra": ""}, {"num": 2603, "extra": ""}, {"num": 2604, "extra": "(25% + laptop)"}, {"num": 2606, "extra": ""}, {"num": 2607, "extra": ""}, {"num": 2609, "extra": ""}, {"num": 2610, "extra": ""}, {"num": 2611, "extra": ""}, {"num": 2612, "extra": ""}, {"num": 2613, "extra": ""}, {"num": 2617, "extra": ""}, {"num": 2619, "extra": ""}, {"num": 2620, "extra": "(25%)"}, {"num": 2621, "extra": "(25%)"}, {"num": 2623, "extra": ""}, {"num": 2624, "extra": ""}, {"num": 2627, "extra": ""}, {"num": 2628, "extra": ""}, {"num": 2629, "extra": ""}, {"num": 2630, "extra": ""}, {"num": 2631, "extra": ""}, {"num": 2634, "extra": ""}]}, {"date": "15 Jun 2026", "time": "10:30", "exam": "IGCSE Physics 4PH1/2P", "label": "15 Jun 2026  10:30  —  IGCSE Physics 4PH1/2P", "candidates": [{"num": 2511, "extra": ""}, {"num": 2601, "extra": ""}, {"num": 2602, "extra": ""}, {"num": 2603, "extra": ""}, {"num": 2604, "extra": "(25% + laptop)"}, {"num": 2606, "extra": ""}, {"num": 2607, "extra": ""}, {"num": 2609, "extra": ""}, {"num": 2610, "extra": ""}, {"num": 2611, "extra": ""}, {"num": 2612, "extra": ""}, {"num": 2613, "extra": ""}, {"num": 2617, "extra": ""}, {"num": 2619, "extra": ""}, {"num": 2620, "extra": "(25%)"}, {"num": 2621, "extra": "(25%)"}, {"num": 2623, "extra": ""}, {"num": 2624, "extra": ""}, {"num": 2627, "extra": ""}, {"num": 2628, "extra": ""}, {"num": 2629, "extra": ""}, {"num": 2630, "extra": ""}, {"num": 2631, "extra": ""}, {"num": 2634, "extra": ""}]}, {"date": "22 Jun 2026", "time": "14:00", "exam": "A level Religious Studies 9RS0/4B", "label": "22 Jun 2026  14:00  —  A level Religious Studies 9RS0/4B", "candidates": [{"num": 2402, "extra": ""}, {"num": 2412, "extra": "(25%)"}, {"num": 2427, "extra": ""}, {"num": 2442, "extra": ""}]}];
+
+let candidates = [];
+let deskValues = {};
+let currentInvig = '';
+let currentSession = null;
+let dragging = null, draggingFrom = null;
+let isCompact = false;
+const ghost = document.getElementById('ghost');
+
+function saveState() {
+  try {
+    localStorage.setItem('sp3_desks', JSON.stringify(deskValues));
+    localStorage.setItem('sp3_candidates', JSON.stringify(candidates));
+    localStorage.setItem('sp3_invig', currentInvig);
+    localStorage.setItem('sp3_session', JSON.stringify(currentSession));
+    localStorage.setItem('sp3_compact', isCompact ? '1' : '0');
+  } catch(e) {}
+}
+
+function loadState() {
+  try {
+    const d  = localStorage.getItem('sp3_desks');
+    const c  = localStorage.getItem('sp3_candidates');
+    const iv = localStorage.getItem('sp3_invig');
+    const ss = localStorage.getItem('sp3_session');
+    const cp = localStorage.getItem('sp3_compact');
+    if (d)  deskValues      = JSON.parse(d);
+    if (c)  candidates      = JSON.parse(c);
+    if (iv) currentInvig    = iv;
+    if (ss) currentSession  = JSON.parse(ss);
+    if (cp === '1') isCompact = true;
+    if (currentSession && currentInvig) showSeatingArea();
+  } catch(e) {}
+}
+
+function populateDropdowns() {
+  const invSel = document.getElementById('inv-select');
+  STAFF_LIST.forEach(name => {
+    const o = document.createElement('option');
+    o.value = o.textContent = name;
+    invSel.appendChild(o);
+  });
+  if (currentInvig) invSel.value = currentInvig;
+
+  // Filter: only show sessions from today onwards
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const sesSel = document.getElementById('session-select');
+  let hiddenCount = 0;
+  SESSION_LIST.forEach((s, i) => {
+    // Parse the date string e.g. "24 Apr 2026"
+    const sessionDate = new Date(s.date);
+    sessionDate.setHours(0, 0, 0, 0);
+    if (sessionDate < today) { hiddenCount++; return; }
+    const o = document.createElement('option');
+    o.value = i;
+    o.textContent = s.label;
+    sesSel.appendChild(o);
+  });
+  // Show a note if past sessions were hidden
+  if (hiddenCount > 0) {
+    const note = document.createElement('option');
+    note.disabled = true;
+    note.textContent = `— ${hiddenCount} past session${hiddenCount > 1 ? 's' : ''} hidden —`;
+    sesSel.insertBefore(note, sesSel.options[1]);
+  }
+  updatePreview();
+}
+
+function updatePreview() {
+  const invVal = document.getElementById('inv-select').value;
+  const sesIdx = document.getElementById('session-select').value;
+  const preview = document.getElementById('session-preview');
+  const btn = document.getElementById('confirm-btn');
+  if (invVal && sesIdx !== '') {
+    const s = SESSION_LIST[parseInt(sesIdx)];
+    preview.innerHTML = `<b>${invVal}</b> &nbsp;·&nbsp; ${s.date} ${s.time} &nbsp;·&nbsp; ${s.exam} &nbsp;<span style="color:var(--text-faint)">(${s.candidates.length} candidates)</span>`;
+    btn.disabled = false;
+  } else {
+    preview.textContent = 'Select an invigilator and exam session above';
+    btn.disabled = true;
+  }
+}
+
+function confirmSession() {
+  const invVal = document.getElementById('inv-select').value;
+  const sesIdx = parseInt(document.getElementById('session-select').value);
+  if (!invVal || isNaN(sesIdx)) return;
+  currentInvig   = invVal;
+  currentSession = SESSION_LIST[sesIdx];
+  candidates     = [...currentSession.candidates];
+  deskValues     = {};
+  saveState();
+  showSeatingArea();
+}
+
+function showSeatingArea() {
+  document.getElementById('setup-panel').className = 'setup-panel closed';
+  document.getElementById('session-bar').style.display = 'flex';
+  document.getElementById('bottom-bar').style.display  = 'flex';
+  document.getElementById('session-info-text').innerHTML =
+    `<b>${currentInvig}</b> &nbsp;·&nbsp; ${currentSession.date} &nbsp;${currentSession.time} &nbsp;·&nbsp; ${currentSession.exam} &nbsp;<span>(${candidates.length} candidates)</span>`;
+  // Show signature panel
+  const sigPanel = document.getElementById('sig-panel');
+  sigPanel.className = 'sig-panel visible';
+  document.getElementById('sig-name-label').textContent = currentInvig;
+  // Defer canvas init until panel is rendered and has dimensions
+  requestAnimationFrame(() => { requestAnimationFrame(initSigCanvas); });
+  buildMainArea();
+  reRender();
+}
+
+// ── Signature canvas ──────────────────────────────────────
+let sigDrawing = false;
+let sigLastX = 0, sigLastY = 0;
+
+function initSigCanvas() {
+  const canvas = document.getElementById('sig-canvas');
+  if (!canvas) return;
+  // Size canvas pixels to match display size
+  const rect = canvas.getBoundingClientRect();
+  canvas.width  = Math.round(rect.width  || canvas.offsetWidth  || 300) * window.devicePixelRatio;
+  canvas.height = Math.round(rect.height || canvas.offsetHeight || 80)  * window.devicePixelRatio;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+  ctx.strokeStyle = '#1a1a1a';
+  ctx.lineWidth = 2;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+
+  canvas.addEventListener('pointerdown', sigStart);
+  canvas.addEventListener('pointermove', sigMove);
+  canvas.addEventListener('pointerup',   sigEnd);
+  canvas.addEventListener('pointercancel', sigEnd);
+}
+
+function getSigPos(e) {
+  const canvas = document.getElementById('sig-canvas');
+  const rect = canvas.getBoundingClientRect();
+  return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+}
+
+function sigStart(e) {
+  e.preventDefault();
+  const canvas = document.getElementById('sig-canvas');
+  canvas.setPointerCapture(e.pointerId);
+  sigDrawing = true;
+  const pos = getSigPos(e);
+  sigLastX = pos.x; sigLastY = pos.y;
+  const ctx = canvas.getContext('2d');
+  ctx.beginPath();
+  ctx.arc(pos.x, pos.y, 1, 0, Math.PI * 2);
+  ctx.fillStyle = '#1a1a1a';
+  ctx.fill();
+}
+
+function sigMove(e) {
+  if (!sigDrawing) return;
+  e.preventDefault();
+  const canvas = document.getElementById('sig-canvas');
+  const ctx = canvas.getContext('2d');
+  const pos = getSigPos(e);
+  ctx.beginPath();
+  ctx.moveTo(sigLastX, sigLastY);
+  ctx.lineTo(pos.x, pos.y);
+  ctx.strokeStyle = '#1a1a1a';
+  ctx.lineWidth = 2;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.stroke();
+  sigLastX = pos.x; sigLastY = pos.y;
+}
+
+function sigEnd(e) { sigDrawing = false; }
+
+function clearSig() {
+  const canvas = document.getElementById('sig-canvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+}
+
+function getSigDataURL() {
+  const canvas = document.getElementById('sig-canvas');
+  if (!canvas) return null;
+  // Check if anything drawn
+  const ctx = canvas.getContext('2d');
+  const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+  const hasContent = Array.from(data).some(v => v !== 0);
+  return hasContent ? canvas.toDataURL('image/png') : null;
+}
+
+function changeSession() {
+  document.getElementById('setup-panel').className = 'setup-panel open';
+  document.getElementById('session-bar').style.display  = 'none';
+  document.getElementById('bottom-bar').style.display   = 'none';
+  document.getElementById('sig-panel').className = 'sig-panel';
+  document.getElementById('main-area').innerHTML = `<div class="empty-state"><div class="big">📋</div><p>Select your name and an exam session above to begin</p></div>`;
+  document.getElementById('inv-select').value = currentInvig || '';
+  updatePreview();
+}
+
+function buildMainArea() {
+  const main = document.getElementById('main-area');
+  main.innerHTML = `
+    <div class="token-panel ${isCompact ? 'compact' : 'normal'}" id="token-panel">
+      <div class="panel-header">
+        <span id="panel-title">${isCompact ? '' : 'Candidates'}</span>
+        <button class="view-toggle" id="compact-btn" onclick="toggleCompact()">${isCompact ? '▶' : '◀'}</button>
+      </div>
+      <div class="token-scroll" id="token-list"></div>
+    </div>
+    <div class="grid-area">
+      <div class="room-label">▲ FRONT OF ROOM</div>
+      <div id="grid-wrap"></div>
+    </div>`;
+}
+
+function toggleCompact() {
+  isCompact = !isCompact;
+  const panel = document.getElementById('token-panel');
+  panel.className = 'token-panel ' + (isCompact ? 'compact' : 'normal');
+  document.getElementById('panel-title').textContent = isCompact ? '' : 'Candidates';
+  document.getElementById('compact-btn').textContent = isCompact ? '▶' : '◀';
+  saveState();
+}
+
+function placedSet() { return new Set(Object.values(deskValues).map(v => v.num)); }
+function allSeatKeys() {
+  const keys = []; let r = 0;
+  LAYOUT.forEach(row => { if (!row) return; row.forEach((a,c) => { if(a) keys.push(`${r}_${c}`); }); r++; });
+  return keys;
+}
+function buildSeatId(r, c) { return `R${r+1}C${c+1}`; }
+
+function renderTokens() {
+  const tl = document.getElementById('token-list'); if (!tl) return;
+  const placed = placedSet();
+  tl.innerHTML = '';
+  candidates.forEach(c => {
+    if (placed.has(c.num)) return; // skip placed — list rolls up
+    const t = document.createElement('div');
+    t.className = 'token';
+    t.innerHTML = `<div class="t-num">${c.num}</div>${c.extra ? `<div class="t-extra">${c.extra}</div>` : ''}`;
+    addDragSource(t, 'token', c, null);
+    tl.appendChild(t);
+  });
+}
+
+function renderGrid() {
+  const wrap = document.getElementById('grid-wrap'); if (!wrap) return;
+  wrap.innerHTML = '';
+  let rowIdx = 0;
+  LAYOUT.forEach(row => {
+    if (!row) {
+      const a = document.createElement('div'); a.className = 'aisle-label'; a.textContent = '— aisle —'; wrap.appendChild(a); return;
+    }
+    const grid = document.createElement('div');
+    grid.className = 'desk-grid';
+    grid.style.gridTemplateColumns = `repeat(${COLS}, 76px)`;
+    row.forEach((active, c) => {
+      const key = `${rowIdx}_${c}`;
+      const el = document.createElement('div');
+      if (!active) { el.className = 'desk gap'; grid.appendChild(el); return; }
+      const val = deskValues[key];
+      el.className = 'desk' + (val ? ' filled' : '');
+      el.dataset.key = key;
+      if (val) {
+        el.innerHTML = `<div class="d-num">${val.num}</div>${val.extra ? `<div class="d-extra">${val.extra}</div>` : ''}`;
+        const rb = document.createElement('button'); rb.className = 'remove-btn'; rb.textContent = '×';
+        rb.addEventListener('pointerdown', ev => { ev.stopPropagation(); ev.preventDefault(); delete deskValues[key]; saveState(); reRender(); });
+        el.appendChild(rb);
+        addDragSource(el, 'desk', val, key);
+      }
+      const lbl = document.createElement('div'); lbl.className = 'seat-id'; lbl.textContent = buildSeatId(rowIdx, c);
+      el.appendChild(lbl);
+      grid.appendChild(el);
+    });
+    wrap.appendChild(grid);
+    rowIdx++;
+  });
+}
+
+function reRender() { renderTokens(); renderGrid(); updateStats(); }
+
+function updateStats() {
+  const placed = Object.keys(deskValues).length;
+  const sp = document.getElementById('s-placed'); if (sp) sp.textContent = placed;
+  const sr = document.getElementById('s-remain'); if (sr) sr.textContent = candidates.length - placed;
+  const se = document.getElementById('s-empty');  if (se) se.textContent  = allSeatKeys().length - placed;
+}
+
+function addDragSource(el, type, cand, fromKey) {
+  el.addEventListener('pointerdown', function(e) {
+    if (e.target.classList.contains('remove-btn')) return;
+    e.preventDefault();
+    dragging = cand; draggingFrom = (type === 'desk') ? fromKey : null;
+    el.classList.add('dragging');
+    document.getElementById('g-num').textContent  = cand.num;
+    document.getElementById('g-extra').textContent = cand.extra || '';
+    ghost.style.display = 'flex';
+    ghost.style.left = e.clientX + 'px'; ghost.style.top = e.clientY + 'px';
+    el.setPointerCapture(e.pointerId);
+    function onMove(ev) {
+      ghost.style.left = ev.clientX + 'px'; ghost.style.top = ev.clientY + 'px';
+      document.querySelectorAll('.desk:not(.gap)').forEach(d => d.classList.remove('over'));
+      const t = getDeskAt(ev.clientX, ev.clientY); if (t) t.classList.add('over');
+    }
+    function onUp(ev) {
+      ghost.style.display = 'none';
+      document.querySelectorAll('.desk').forEach(d => d.classList.remove('over'));
+      const target = getDeskAt(ev.clientX, ev.clientY);
+      if (target && dragging !== null) {
+        const key = target.dataset.key;
+        const existing = deskValues[key];
+        if (draggingFrom) { if (existing !== undefined) deskValues[draggingFrom] = existing; else delete deskValues[draggingFrom]; }
+        deskValues[key] = dragging;
+        saveState(); reRender();
+      }
+      document.querySelectorAll('.dragging').forEach(d => d.classList.remove('dragging'));
+      dragging = null; draggingFrom = null;
+      el.removeEventListener('pointermove', onMove); el.removeEventListener('pointerup', onUp); el.removeEventListener('pointercancel', onUp);
+    }
+    el.addEventListener('pointermove', onMove); el.addEventListener('pointerup', onUp); el.addEventListener('pointercancel', onUp);
+  });
+}
+
+function getDeskAt(x, y) {
+  for (const el of document.elementsFromPoint(x, y)) {
+    if (el.classList && el.classList.contains('desk') && !el.classList.contains('gap')) return el;
+    const p = el.closest && el.closest('.desk:not(.gap)'); if (p) return p;
+  }
+  return null;
+}
+
+function showInstall() { document.getElementById('install-modal').style.display = 'flex'; }
+
+function clearAll() {
+  if (!confirm('Clear all placed candidates?')) return;
+  deskValues = {}; saveState(); reRender();
+}
+
+function printPlan() {
+  if (!currentSession) { alert('Please select an exam session first.'); return; }
+  const sigDataURL = getSigDataURL();
+  let rowIdx = 0;
+  let gridHtml = '';
+  LAYOUT.forEach(row => {
+    if (!row) { gridHtml += `<div class="grid"><div class="aisle">— AISLE —</div></div>`; return; }
+    gridHtml += `<div class="grid">`;
+    row.forEach((active, c) => {
+      if (!active) { gridHtml += `<div class="desk gap"></div>`; return; }
+      const key = `${rowIdx}_${c}`, val = deskValues[key];
+      if (val) {
+        gridHtml += `<div class="desk filled"><div class="d-num">${val.num}</div>${val.extra?`<div class="d-extra">${val.extra}</div>`:''}<div class="sid">${buildSeatId(rowIdx,c)}</div></div>`;
+      } else {
+        gridHtml += `<div class="desk"><div class="sid">${buildSeatId(rowIdx,c)}</div></div>`;
+      }
+    });
+    gridHtml += `</div>`; rowIdx++;
+  });
+
+  const pdfTitle = `Seating Plan C12 ${currentSession.date} ${currentSession.time}`;
+  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${pdfTitle}</title><style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;background:#fff;font-family:'Segoe UI',sans-serif}
+@page{size:A4 portrait;margin:1cm}
+body{display:flex;align-items:flex-start;justify-content:center;padding:0}
+#page{
+  width:190mm;
+  transform-origin:top left;
+}
+.heading{text-align:center;margin-bottom:12px;border-bottom:1.5px solid #e5e7eb;padding-bottom:12px}
+.heading h2{font-size:17px;font-weight:700;color:#1a1a1a;margin-bottom:3px;line-height:1.3}
+.heading .sub{font-size:12px;color:#6b7280;margin-bottom:2px}
+.heading .invig{font-size:13px;color:#185FA5;font-weight:600}
+.front{text-align:center;font-size:10px;color:#9ca3af;letter-spacing:.1em;font-weight:600;margin-bottom:9px}
+.grid{display:grid;grid-template-columns:repeat(${COLS},76px);gap:8px;margin-bottom:8px}
+.desk{width:76px;min-height:66px;border:1.5px solid #c9d4e0;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:8px;padding:4px;text-align:center}
+.filled{background:#EEF6FB;border-color:#185FA5}
+.d-num{font-size:17px;font-weight:700;color:#185FA5;line-height:1.2}
+.d-extra{font-size:9px;color:#378ADD;margin-top:2px;line-height:1.2}
+.sid{font-size:7px;color:#d1d5db;margin-top:2px}
+.gap{border:none;background:transparent}
+.aisle{text-align:center;font-size:9px;color:#c9d4e0;letter-spacing:.1em;padding:5px 0;border-top:1px dashed #e5e7eb;border-bottom:1px dashed #e5e7eb;margin:3px 0;grid-column:1/-1}
+.sig-footer{margin-top:14px;padding-top:12px;border-top:1.5px solid #e5e7eb}
+.sig-label{font-size:9px;color:#9ca3af;text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px}
+.sig-name{font-size:13px;font-weight:600;color:#185FA5;margin-bottom:6px}
+.sig-line{border-bottom:1.5px solid #1a1a1a;min-height:65px;max-width:350px;display:flex;align-items:flex-end}
+.sig-line img{max-height:65px;max-width:350px;display:block}
+</style></head><body>
+<div id="page">
+  <div class="heading">
+    <h2>${currentSession.exam}</h2>
+    <div class="sub">${currentSession.date} &nbsp;&nbsp; ${currentSession.time}</div>
+    <div class="invig">Invigilator: ${currentInvig}</div>
+  </div>
+  <div class="front">▲ FRONT OF ROOM</div>
+  ${gridHtml}
+  <div class="sig-footer">
+    <div class="sig-label">Invigilator signature</div>
+    <div class="sig-name">${currentInvig}</div>
+    <div class="sig-line">${sigDataURL ? `<img src="${sigDataURL}">` : ''}</div>
+  </div>
+</div>
+<script>
+window.onload = function() {
+  var page = document.getElementById('page');
+  var pageH = page.offsetHeight;
+  var pageW = page.offsetWidth;
+  // A4 usable area at 96dpi with 1cm margins: ~1039px tall, ~719px wide
+  var availableH = 1039;
+  var availableW = 719;
+  // Scale to fill available height, but never exceed available width
+  var scaleH = availableH / pageH;
+  var scaleW = availableW / pageW;
+  var scale = Math.min(scaleH, scaleW);
+  page.style.transform = 'scale(' + scale + ')';
+  page.style.transformOrigin = 'top left';
+  document.body.style.height = Math.ceil(pageH * scale) + 'px';
+  setTimeout(function(){ window.print(); }, 350);
+};
+<\/script>
+</body></html>`;
+
+  const win = window.open('','_blank');
+  win.document.write(html);
+  win.document.close();
+}
+
+const manifest = {name:"Exam Seating Plan",short_name:"Seating Plan",description:"Exam seating plan with drag and drop",start_url:".",display:"standalone",background_color:"#f0f2f5",theme_color:"#185FA5",orientation:"portrait",icons:[{src:"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' rx='32' fill='%23185FA5'/%3E%3Crect x='20' y='30' width='70' height='55' rx='8' fill='white' opacity='.9'/%3E%3Crect x='102' y='30' width='70' height='55' rx='8' fill='white' opacity='.9'/%3E%3Crect x='20' y='100' width='70' height='55' rx='8' fill='white' opacity='.9'/%3E%3Crect x='102' y='100' width='70' height='55' rx='8' fill='white' opacity='.9'/%3E%3C/svg%3E",sizes:"192x192",type:"image/svg+xml",purpose:"any maskable"}]};
+const mBlob = new Blob([JSON.stringify(manifest)],{type:'application/json'});
+document.getElementById('manifest-placeholder').href = URL.createObjectURL(mBlob);
+
+if ('serviceWorker' in navigator) {
+  const sw = `const C='sp-v5';self.addEventListener('install',e=>{self.skipWaiting();});self.addEventListener('fetch',e=>{e.respondWith(fetch(e.request).catch(()=>caches.match(e.request)));});`;
+  navigator.serviceWorker.register(URL.createObjectURL(new Blob([sw],{type:'application/javascript'})),{scope:'./'}).catch(()=>{});
+}
+
+populateDropdowns();
+loadState();
+</script>
+</body>
+</html>
