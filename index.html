@@ -95,6 +95,9 @@ html, body { height: 100%; overflow: hidden; font-family: 'Segoe UI', system-ui,
 .desk.over { background: var(--blue-light); border-color: var(--blue); border-style: solid; }
 .desk.filled { border-style: solid; border-color: var(--blue); background: var(--blue-light); }
 .desk .seat-id { position: absolute; bottom: 2px; right: 4px; font-size: 8px; color: var(--text-faint); pointer-events: none; }
+.teacher-desk-row { display: flex; justify-content: flex-end; margin-top: 14px; padding-top: 10px; border-top: 2px dashed #d1d5db; }
+.teacher-desk { background: #fff8e6; border: 2px solid #c9a227; border-radius: var(--radius); padding: 6px 14px; min-width: 140px; text-align: center; }
+.teacher-desk .td-label { font-size: 11px; font-weight: 700; color: #8a6800; letter-spacing: 0.05em; text-transform: uppercase; }
 .desk .remove-btn { position: absolute; top: -9px; right: -9px; width: 22px; height: 22px; border-radius: 50%; background: var(--red); color: #fff; border: none; font-size: 15px; line-height: 22px; text-align: center; cursor: pointer; display: none; padding: 0; font-weight: 600; }
 .desk.filled:hover .remove-btn, .desk.filled:focus-within .remove-btn { display: block; }
 
@@ -216,10 +219,11 @@ canvas#sig-canvas {
 
 <script>
 const COLS = 5;
+const TEACHER_DESK_ROW = true; // special row 0
 const LAYOUT = [
-  [1,1,1,1,1],[1,1,1,1,1],[1,1,1,1,1],[1,1,1,1,1],
+  [1,1,1,1,1],[1,1,1,1,1],[1,1,1,1,1],[0,1,1,1,0],
   null,
-  [1,1,1,1,1],[1,1,1,1,1],[1,1,1,1,1],[1,1,0,0,0]
+  [1,1,1,1,1],[1,1,1,1,1],[1,1,1,1,1],[1,1,0,1,1]
 ];
 
 const STAFF_LIST = ["Sophie Benon", "Robert Davies", "Ian Gould", "Connor Graham", "Kyna Haden", "Marie Haigh-McGarry", "Tamás Jakab", "Tendai Karalius", "Terence Leggo", "Vanessa Limpkin", "Leslie McGregor", "Nonjabulo Mchunu", "Oscar McNaughton", "Róbertné Nagy", "Viki Naserghodsi", "Hakon Osmundsen", "Charlie Plummer", "Rob Riddell", "Richard Roberts", "Eszter Seres", "Robert Setchell", "Andor Spisák", "Hannah Sweatman", "Joshua Thwaites", "Luca Trovo", "Anikó Varga", "Matthew White", "Brigitta Kitti Zalatnay-Kovács"];
@@ -437,8 +441,9 @@ function buildMainArea() {
       <div class="token-scroll" id="token-list"></div>
     </div>
     <div class="grid-area">
-      <div class="room-label">▲ FRONT OF ROOM</div>
       <div id="grid-wrap"></div>
+      <div class="teacher-desk-row"><div class="teacher-desk"><div class="td-label">Teacher's Desk</div></div></div>
+      <div class="room-label">▼ FRONT OF ROOM</div>
     </div>`;
 }
 
@@ -609,6 +614,8 @@ body{display:flex;align-items:flex-start;justify-content:center;padding:0}
 .sid{font-size:7px;color:#d1d5db;margin-top:2px}
 .gap{border:none;background:transparent}
 .aisle{text-align:center;font-size:9px;color:#c9d4e0;letter-spacing:.1em;padding:5px 0;border-top:1px dashed #e5e7eb;border-bottom:1px dashed #e5e7eb;margin:3px 0;grid-column:1/-1}
+.teacher-desk-row{display:flex;justify-content:flex-end;margin-top:12px;padding-top:10px;border-top:2px dashed #d1d5db;}
+.teacher-desk{background:#fff8e6;border:2px solid #c9a227;border-radius:8px;padding:5px 14px;min-width:130px;text-align:center;font-size:10px;font-weight:700;color:#8a6800;letter-spacing:0.05em;text-transform:uppercase;}
 .sig-footer{margin-top:14px;padding-top:12px;border-top:1.5px solid #e5e7eb}
 .sig-label{font-size:9px;color:#9ca3af;text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px}
 .sig-name{font-size:13px;font-weight:600;color:#185FA5;margin-bottom:6px}
@@ -621,8 +628,9 @@ body{display:flex;align-items:flex-start;justify-content:center;padding:0}
     <div class="sub">${currentSession.date} &nbsp;&nbsp; ${currentSession.time}</div>
     <div class="invig">Invigilator: ${currentInvig}</div>
   </div>
-  <div class="front">▲ FRONT OF ROOM</div>
   ${gridHtml}
+  <div class="teacher-desk-row"><div class="teacher-desk">Teacher's Desk</div></div>
+  <div class="front">▼ FRONT OF ROOM</div>
   <div class="sig-footer">
     <div class="sig-label">Invigilator signature</div>
     <div class="sig-name">${currentInvig}</div>
